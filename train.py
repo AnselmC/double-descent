@@ -38,6 +38,16 @@ class Training:
         for p in num_params:
             self._all_models.append(model(input_dim, p, num_classes))
 
+    def save(self):
+        file_name = os.path.join("data", "results", self._model_name)
+        content = {}
+        content["Train losses"] = self.all_train_losses
+        content["Val losses"] = self.all_val_losses
+        content["Test losses"] = self.all_test_losses
+        with open(file_name, "w") as fd:
+            json.dump(content, file_name)
+
+        
     def start(self):
         print("=" * 30)
         print("TRAINING {} NETS ON {} DATASET USING {} MODEL".format(
@@ -146,3 +156,4 @@ if __name__ == "__main__":
 
     training = Training(model, dataset, num_params, epochs)
     training.start()
+    training.save()
