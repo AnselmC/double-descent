@@ -97,7 +97,7 @@ class Training:
                 net.eval()
                 running_val_loss = 0.0
                 for data in self._val_loader:
-                    images, labels = data
+                    images, labels = data[0].to(self._device), data[1].to(self._device)
                     outputs = net(images)
                     loss = self._loss_function(outputs, labels)
                     running_val_loss += loss.item()
@@ -117,7 +117,7 @@ class Training:
             total = 0
             correct = 0
             for data in self._test_loader:
-                images, labels = data
+                images, labels = data[0].to(self._device), data[1].to(self._device)
                 outputs = net(images)
                 loss = self._loss_function(outputs, labels)
                 running_test_loss += loss.item()
