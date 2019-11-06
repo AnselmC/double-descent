@@ -40,21 +40,21 @@ class Training:
             self._all_models.append(model(input_dim, p, num_classes))
 
     def save(self):
-        file_name = os.path.join("data", "results", self._model_name)
+        file_name = os.path.join("data", "results", self._model_name + ".json")
         content = {}
         content["Train losses"] = self.all_train_losses
         content["Val losses"] = self.all_val_losses
         content["Test losses"] = self.all_test_losses
         with open(file_name, "w") as fd:
-            json.dump(content, file_name)
+            json.dump(content, fd)
 
         
     def start(self):
         print("=" * 30)
         print("TRAINING {} NETS ON {} DATASET USING {} MODEL".format(
             len(self._all_models), self._dataset_name.upper(), self._model_name.upper(), ))
-        start = time.time()
         for i, net in enumerate(self._all_models):
+            start = time.time()
             pbar = ProgressBar(self._epochs)
             if i == 0:
                 # initialize smallest net using Xavier Glorot-uniform distribution
