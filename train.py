@@ -3,6 +3,7 @@ import torchvision
 import torch.nn as nn
 import argparse
 import json
+import time
 import os
 
 import torch.optim as optimizers
@@ -52,6 +53,7 @@ class Training:
         print("=" * 30)
         print("TRAINING {} NETS ON {} DATASET USING {} MODEL".format(
             len(self._all_models), self._dataset_name.upper(), self._model_name.upper(), ))
+        start = time.time()
         for i, net in enumerate(self._all_models):
             pbar = ProgressBar(self._epochs)
             if i == 0:
@@ -127,6 +129,7 @@ class Training:
             test_loss = running_test_loss / len(self._test_loader)
             pbar.done(net, train_losses[-1], val_losses[-1], test_loss, correct/total)
             print("Saving network to \"{}\"\n".format(path), end="\r")
+            print("Training took {:.2f}s".format(time.time()-start))
             torch.save(net.state_dict(), path)
             self.all_test_losses[net_name] = test_loss
 
