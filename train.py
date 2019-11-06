@@ -58,7 +58,7 @@ class Training:
                     net.hidden.bias, self._all_models[i-1].hidden.bias)
                 nn.init.normal_(net.out.weight, 0, 0.01)
 
-            # net.to(device)
+            net.to(self._device)
             # init learning rate not clear
             optimizer = optimizers.SGD(
                 net.parameters(), lr=0.001, momentum=0.95)
@@ -70,8 +70,8 @@ class Training:
             for epoch in range(self._epochs):
                 running_loss = 0.0
                 for data in self._train_loader:
-                    #inputs, labels = data[0].to(device), data[1].to(device)
-                    inputs, labels = data
+                    inputs, labels = data[0].to(self._device), data[1].to(self._device)
+                    #inputs, labels = data
                     optimizer.zero_grad()
                     outputs = net(inputs)
                     loss = self._loss_function(outputs, labels)
