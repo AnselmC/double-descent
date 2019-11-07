@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 
 # own
 from nets import initialize_with_previous_weights, initialize_with_previous_bias, get_model_by_name
-from helpers import get_dataset, init_print, ProgressBar
+from helpers import get_dataset, init_print, Progress
 
 AVAILABLE_NETS = ["two_layer_nn"]
 
@@ -62,9 +62,9 @@ class Training:
 
     def start(self):
         init_print(len(self._all_models), self._model_name, self._dataset_name)
-        pbar = ProgressBar(len(self._all_models), self._epochs, len(self._train_loader))
+        progress = Progress(len(self._all_models), self._epochs, len(self._train_loader))
         for i, net in enumerate(self._all_models):
-            pbar.update_model()
+            progress.update_model()
             if self._prev_net is None:
                 # initialize smallest net using Xavier Glorot-uniform distribution
                 gain = nn.init.calculate_gain("relu")
@@ -91,7 +91,7 @@ class Training:
             for epoch in range(self._epochs):
                 running_loss = 0.0
                 for data in self._train_loader:
-                    pbar.update_batch()
+                    progress.update_batch()
                     inputs, labels = data[0].to(
                         self._device), data[1].to(self._device)
                     #inputs, labels = data
@@ -117,7 +117,7 @@ class Training:
                     running_val_loss += loss.item()
                 val_losses.append(running_val_loss / len(self._val_loader))
 
-                pbar.update_epoch(train_losses[-1], val_losses[-1])
+                progress.update_epoch(train_losses[-1], val_losses[-1])
 
                 if train_losses[-1] == 0.0 and net.num_parameters() < self._interpolation_threshold:
                     break
@@ -143,14 +143,14 @@ class Training:
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
             test_loss = running_test_loss / len(self._test_loader)
-            pbar.finished_model(net.num_parameters(), test_loss, correct/total)
+            progress.finished_model(net.num_parameters(), test_loss, correct/total)
             print("Saving network to \"{}\"\n".format(file_name))
             self._prev_net = net
             self.save()
             torch.save(net.state_dict(), file_name)
             self.all_test_losses[net_name] = test_loss
 
-        pbar.finished_training()
+        progress.finished_training()
 
 
 if __name__ == "__main__":
