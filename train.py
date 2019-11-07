@@ -20,9 +20,6 @@ AVAILABLE_NETS = ["two_layer_nn"]
 
 class Training:
     def __init__(self, model, dataset, num_params, epochs, prev_net=None):
-        if prev_net is not None and len(num_params) > 1:
-            raise RuntimeError("If previous net is given, you only run next larger net")
-        self._prev_net = prev_net
         self._train_loader = dataset.train_loader
         self._val_loader = dataset.val_loader
         self._test_loader = dataset.test_loader
@@ -40,6 +37,14 @@ class Training:
         self._dataset_name = type(self._val_loader.dataset).__name__
         self._model_name = model.name()
         input_dim = self._val_loader.dataset[0][0].size()[0]
+        if prev_net is not None:
+            prev_num_hidden = len(prev_net['hidden.weight'])
+            self._prev_net = model(input_dim, prev_num_hidden, num_classes)
+            self._prev_net.load_state_dict(prev_net)
+            num_params = [num_params[num_params.index(prev_num_hidden) + 1]]
+        else:
+            self._prev_net = None
+
         for p in num_params:
             self._all_models.append(model(input_dim, p, num_classes))
 
@@ -173,10 +178,6 @@ if __name__ == "__main__":
             raise FileNotFoundError("Couldn't find {}".format(args.prev))
         previous_net = torch.load(args.prev)
     num_params = config["num_params"][model_name]
-    if previous_net is not None:
-        previous_size = args.prev.split("_")[-1]
-        num_params = num_params[num_params.index(int(previous_size) + 1)]
-        
     model = get_model_by_name(model_name)
     dataset = get_dataset(dataset_name, train_subset_size, batch_size)
 
