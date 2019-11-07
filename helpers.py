@@ -62,7 +62,10 @@ def get_transform(dataset):
 
 
 def init_print(num_models, model_name, dataset_name):
-    _, width = os.popen("stty size", "r").read().split()
+    try:
+        _, width = os.popen("stty size", "r").read().split()
+    except Exception:
+        width = 60
     print("=" * int(width))
     print("Training {} {} models on {} dataset...".format(
         num_models, model_name, dataset_name))
