@@ -87,7 +87,10 @@ class ProgressBar:
         self._progress_string = "\rNet: {} | Epoch: {:4d} | Batch: {:3d} | {:.2f} % | {} | Train/val: {:.2f}/{:.2f} |"
 
     def finished_model(self, num_parameters, test_loss, acc):
-        _, width = os.popen("stty size", "r").read().split()
+        try:
+            _, width = os.popen("stty size", "r").read().split()
+        except Exception:
+            width = 60
         finished_string = "=" * int(width)
         finished_string += "\nFinished training model with {} parameters".format(
             num_parameters)
@@ -100,7 +103,10 @@ class ProgressBar:
         print(finished_string)
 
     def finished_training(self):
-        _, width = os.popen("stty size", "r").read().split()
+        try:
+            _, width = os.popen("stty size", "r").read().split()
+        except Exception:
+            width = 60
         finished_string = "=" * int(width)
         finished_string += "\nFinished entire training of {} models.".format(
             self._num_models)
@@ -148,7 +154,10 @@ class ProgressBar:
                                                                self._eta,
                                                                self._train_loss,
                                                                self._val_loss)
-        _, width = os.popen("stty size", "r").read().split()
+        try:
+            _, width = os.popen("stty size", "r").read().split()
+        except Exception:
+            width = 60
         available_width = max(
             0, int(width) - len(current_progress_string.expandtabs()) - 2)
 
