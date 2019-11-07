@@ -1,9 +1,11 @@
 import os
+import time
+import datetime
+from collections import namedtuple
+
 import numpy as np
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-
-from collections import namedtuple
 from torch.utils.data import DataLoader, sampler
 
 Dataset = namedtuple("Dataset", ["train_loader", "val_loader", "test_loader"])
@@ -59,35 +61,94 @@ def get_transform(dataset):
     return transform
 
 
+def init_print(num_models, model_name, dataset_name):
+    _, width = os.popen("stty size", "r").read().split()
+    print("=" * int(width))
+    print("Training {} {} models on {} dataset...".format(
+        num_models, model_name, dataset_name))
+
+    print("=" * int(width))
+
+
 class ProgressBar:
-    def __init__(self, max_epochs):
-        self._max_epochs = max_epochs
-        self._iteration = 0
-        self._progress_string = "\rNet: {}\t|Epoch: {}\t|{} %\t|Train/val loss: {:.2f}/{:.2f}|\t"
+    def __init__(self, num_models, num_epochs, num_batches):
+        self._num_models = num_models
+        self._num_epochs = num_epochs
+        self._num_batches = num_batches
+        self._model = 0
+        self._epoch = 0
+        self._batch = 0
+        self._val_loss = 0
+        self._train_loss = 0
+        self._start_time_global = time.time()
+        self._start_time_model = time.time()
+        self._time_per_epoch = 0
+        self._eta = "Estimating..."
+        self._progress_string = "\rNet: {} | Epoch: {:4d} | Batch: {:3d} | {:.2f} % | {} | Train/val: {:.2f}/{:.2f} |"
 
-    def done(self, net, train_loss, val_loss, test_loss, acc):
+    def finished_model(self, num_parameters, test_loss, acc):
         _, width = os.popen("stty size", "r").read().split()
-
         finished_string = "=" * int(width)
         finished_string += "\nFinished training model with {} parameters".format(
-            net.num_parameters())
+            num_parameters)
         finished_string += "\nFinal train/val/test loss: {:.2f}/{:.2f}/{:.2f}".format(
-            train_loss, val_loss, test_loss)
-        finished_string += "\nAccuracy: {}\n".format(acc)
+            self._train_loss, self._val_loss, test_loss)
+        finished_string += "\nAccuracy: {}".format(acc)
+        training_time = datetime.timedelta(
+            seconds=round(time.time()-self._start_time_model))
+        finished_string += "\nTraining model took: {}\n".format(training_time)
+        print(finished_string)
+
+    def finished_training(self):
+        _, width = os.popen("stty size", "r").read().split()
+        finished_string = "=" * int(width)
+        finished_string += "\nFinished entire training of {} models.".format(
+            self._num_models)
+        training_time = datetime.timedelta(
+            seconds=round(time.time()-self._start_time_global))
+        finished_string += "\n Training took {}\n".format(training_time)
+        finished_string += "=" * int(width)
         print(finished_string, end="\r")
 
-    def update(self, net, train_loss, val_loss):
-        self._iteration += 1
-        percentage_done = int(100 * self._iteration/self._max_epochs)
-        current_progress_string = self._progress_string.format(net,
-                                                               self._iteration,
-                                                               percentage_done,
-                                                               train_loss,
-                                                               val_loss)
+    def update_batch(self):
+        self._batch += 1
+        self._print_progress_string()
 
+    def update_epoch(self, train_loss, val_loss):
+        self._batch = 0
+        self._epoch += 1
+        if self._epoch == 1:
+            self._time_per_epoch = time.time() - self._start_time_model
+        secs_left = self._time_per_epoch * (self._num_epochs - self._epoch)
+        self._eta = datetime.timedelta(seconds=round(secs_left))
+        self._val_loss = val_loss
+        self._train_loss = train_loss
+        self._print_progress_string()
+
+    def update_model(self):
+        self._model += 1
+        self._epoch = 0
+        if self._model == 0:
+            self._start_time_global = time.time()
+        self._start_time_model = time.time()
+        self._print_progress_string()
+
+    def _print_progress_string(self):
+        # percent epochs = current_epoch / num_epochs
+        # percent batches = current batch / num_batches
+        # percent total = current_batch_total / num_batches_total
+        # num_batches_total = num_epochs * num_batches
+        # current_batch_total = (current_epoch-1) * num_batches + current_batches
+        percentage_done = 100 * (self._epoch * self._num_batches +
+                                 self._batch)/(self._num_epochs*self._num_batches)
+        current_progress_string = self._progress_string.format(self._model,
+                                                               self._epoch,
+                                                               self._batch,
+                                                               percentage_done,
+                                                               self._eta,
+                                                               self._train_loss,
+                                                               self._val_loss)
         _, width = os.popen("stty size", "r").read().split()
-        # 2 for opening and closing brackets
-        #width = 70
         available_width = max(
             0, int(width) - len(current_progress_string.expandtabs()) - 2)
 

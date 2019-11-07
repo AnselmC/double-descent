@@ -1,24 +1,28 @@
-import torch
-import torchvision
-import torch.nn as nn
-import argparse
+# built-in
 import json
 import time
 import os
+import argparse
 
+# 3rd party
+import torch
+import torchvision
+import torch.nn as nn
 import torch.optim as optimizers
 from torch.optim.lr_scheduler import MultiStepLR
-from nets import initialize_with_previous_weights, initialize_with_previous_bias
-import helpers
-from helpers import ProgressBar
-from helpers import get_dataset, ProgressBar
-from nets import get_model_by_name
+
+# own
+from nets import initialize_with_previous_weights, initialize_with_previous_bias, get_model_by_name
+from helpers import get_dataset, init_print, ProgressBar
 
 AVAILABLE_NETS = ["two_layer_nn"]
 
 
 class Training:
-    def __init__(self, model, dataset, num_params, epochs):
+    def __init__(self, model, dataset, num_params, epochs, prev_net=None):
+        if prev_net is not None and len(num_params) > 1:
+            raise RuntimeError("If previous net is given, you only run next larger net")
+        self._prev_net = prev_net
         self._train_loader = dataset.train_loader
         self._val_loader = dataset.val_loader
         self._test_loader = dataset.test_loader
@@ -40,7 +44,10 @@ class Training:
             self._all_models.append(model(input_dim, p, num_classes))
 
     def save(self):
-        file_name = os.path.join("data", "results", self._model_name + ".json")
+        path = os.path.join("data", "results", "epochs_" + str(self._epochs))
+        file_name = os.path.join(path, self._model_name + ".json")
+        if not os.path.exists(path):
+            os.makedirs(path)
         content = {}
         content["Train losses"] = self.all_train_losses
         content["Val losses"] = self.all_val_losses
@@ -48,15 +55,12 @@ class Training:
         with open(file_name, "w") as fd:
             json.dump(content, fd)
 
-        
     def start(self):
-        print("=" * 30)
-        print("TRAINING {} NETS ON {} DATASET USING {} MODEL".format(
-            len(self._all_models), self._dataset_name.upper(), self._model_name.upper(), ))
+        init_print(len(self._all_models), self._model_name, self._dataset_name)
+        pbar = ProgressBar(len(self._all_models), self._epochs, len(self._train_loader))
         for i, net in enumerate(self._all_models):
-            start = time.time()
-            pbar = ProgressBar(self._epochs)
-            if i == 0:
+            pbar.update_model()
+            if self._prev_net is None:
                 # initialize smallest net using Xavier Glorot-uniform distribution
                 gain = nn.init.calculate_gain("relu")
                 nn.init.xavier_uniform_(net.hidden.weight, gain=gain)
@@ -65,9 +69,9 @@ class Training:
             else:
                 nn.init.normal_(net.hidden.weight, 0, 0.01)
                 initialize_with_previous_weights(
-                    net.hidden.weight, self._all_models[i-1].hidden.weight)
+                    net.hidden.weight, self._prev_net.hidden.weight)
                 initialize_with_previous_bias(
-                    net.hidden.bias, self._all_models[i-1].hidden.bias)
+                    net.hidden.bias, self._prev_net.hidden.bias)
                 nn.init.normal_(net.out.weight, 0, 0.01)
 
             net.to(self._device)
@@ -82,7 +86,9 @@ class Training:
             for epoch in range(self._epochs):
                 running_loss = 0.0
                 for data in self._train_loader:
-                    inputs, labels = data[0].to(self._device), data[1].to(self._device)
+                    pbar.update_batch()
+                    inputs, labels = data[0].to(
+                        self._device), data[1].to(self._device)
                     #inputs, labels = data
                     optimizer.zero_grad()
                     outputs = net(inputs)
@@ -99,19 +105,23 @@ class Training:
                 net.eval()
                 running_val_loss = 0.0
                 for data in self._val_loader:
-                    images, labels = data[0].to(self._device), data[1].to(self._device)
+                    images, labels = data[0].to(
+                        self._device), data[1].to(self._device)
                     outputs = net(images)
                     loss = self._loss_function(outputs, labels)
                     running_val_loss += loss.item()
                 val_losses.append(running_val_loss / len(self._val_loader))
 
-                pbar.update(i+1, train_losses[-1], val_losses[-1])
+                pbar.update_epoch(train_losses[-1], val_losses[-1])
 
                 if train_losses[-1] == 0.0 and net.num_parameters() < self._interpolation_threshold:
                     break
 
             net_name = self._model_name + "_" + str(net.num_parameters())
-            path = os.path.join("data", "nets", net_name)
+            path = os.path.join("data", "nets", "epochs_" + str(self._epochs))
+            if not os.path.exists(path):
+                os.makedirs(path)
+            file_name = os.path.join(path, net_name)
             self.all_train_losses[net_name] = train_losses
             self.all_val_losses[net_name] = val_losses
             net.eval()
@@ -119,7 +129,8 @@ class Training:
             total = 0
             correct = 0
             for data in self._test_loader:
-                images, labels = data[0].to(self._device), data[1].to(self._device)
+                images, labels = data[0].to(
+                    self._device), data[1].to(self._device)
                 outputs = net(images)
                 loss = self._loss_function(outputs, labels)
                 running_test_loss += loss.item()
@@ -127,15 +138,16 @@ class Training:
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
             test_loss = running_test_loss / len(self._test_loader)
-            pbar.done(net, train_losses[-1], val_losses[-1], test_loss, correct/total)
-            print("Saving network to \"{}\"\n".format(path), end="\r")
-            print("Training took {:.2f}s".format(time.time()-start))
-            torch.save(net.state_dict(), path)
+            pbar.finished_model(net.num_parameters(), test_loss, correct/total)
+            print("Saving network to \"{}\"\n".format(file_name))
+            self._prev_net = net
+            self.save()
+            torch.save(net.state_dict(), file_name)
             self.all_test_losses[net_name] = test_loss
 
+        pbar.finished_training()
 
-# Run different sized RFF/ReLU RFF/TwoLayerNN on MNIST
-# varying model, varying size
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run multiple trainings "
                                      "with growing network capacity")
@@ -143,6 +155,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model", type=int, help="select model to train: 0 [two_layer_net], 1 [Random Fourier Features], 2 [ReLU Random Fourier Features]", choices={0, 1, 2}, dest="model", default=0)
 
+    parser.add_argument("--prev", type=str, help="run single model size given path to model of previous size", dest="prev")
+    
     parser.add_argument(
         "--config", type=str, help="config file for training", required=True, dest="config")
     args = parser.parse_args()
@@ -153,10 +167,19 @@ if __name__ == "__main__":
     batch_size = config["batch_size"][dataset_name.lower()]
     train_subset_size = config["train_subset_size"][dataset_name.lower()]
     epochs = config["epochs"]
+    previous_net = None
+    if args.prev:
+        if not os.path.exists(args.prev):
+            raise FileNotFoundError("Couldn't find {}".format(args.prev))
+        previous_net = torch.load(args.prev)
     num_params = config["num_params"][model_name]
+    if previous_net is not None:
+        previous_size = args.prev.split("_")[-1]
+        num_params = num_params[num_params.index(int(previous_size) + 1)]
+        
     model = get_model_by_name(model_name)
     dataset = get_dataset(dataset_name, train_subset_size, batch_size)
 
-    training = Training(model, dataset, num_params, epochs)
+    training = Training(model, dataset, num_params, epochs, prev_net=previous_net)
     training.start()
     training.save()
