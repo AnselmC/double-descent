@@ -62,7 +62,7 @@ def get_transform(dataset):
 
 
 
-class ProgressBar:
+class Progress:
     def __init__(self, num_models, num_epochs, num_batches, run_from_term):
         self._num_models = num_models
         self._num_epochs = num_epochs
@@ -124,7 +124,8 @@ class ProgressBar:
 
     def update_batch(self):
         self._batch += 1
-        self._print_progress_string()
+        if self._run_from_term:
+            self._print_progress_string()
 
     def update_epoch(self, train_loss, val_loss):
         self._batch = 0
@@ -135,7 +136,8 @@ class ProgressBar:
         self._eta = datetime.timedelta(seconds=round(secs_left))
         self._val_loss = val_loss
         self._train_loss = train_loss
-        self._print_progress_string()
+        if self._run_from_term:
+            self._print_progress_string()
 
     def update_model(self):
         self._model += 1
@@ -143,7 +145,8 @@ class ProgressBar:
         if self._model == 0:
             self._start_time_global = time.time()
         self._start_time_model = time.time()
-        self._print_progress_string()
+        if self._run_from_term:
+            self._print_progress_string()
 
     def _print_progress_string(self):
         # percent epochs = current_epoch / num_epochs
