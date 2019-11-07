@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 
 # own
 from nets import initialize_with_previous_weights, initialize_with_previous_bias, get_model_by_name
-from helpers import get_dataset, init_print, ProgressBar
+from helpers import get_dataset, ProgressBar
 
 AVAILABLE_NETS = ["two_layer_nn"]
 
@@ -61,8 +61,13 @@ class Training:
             json.dump(content, fd)
 
     def start(self):
-        init_print(len(self._all_models), self._model_name, self._dataset_name)
-        pbar = ProgressBar(len(self._all_models), self._epochs, len(self._train_loader))
+        try:
+           _, _ = os.popen("stty size", "r").read().split()
+           run_from_term = True
+        except Exception:
+            run_from_term = False
+        pbar = ProgressBar(len(self._all_models), self._epochs, len(self._train_loader), run_from_term)
+        pbar.init_print(len(self._all_models), self._model_name, self._dataset_name)
         for i, net in enumerate(self._all_models):
             pbar.update_model()
             if self._prev_net is None:

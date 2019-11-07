@@ -61,23 +61,13 @@ def get_transform(dataset):
     return transform
 
 
-def init_print(num_models, model_name, dataset_name):
-    try:
-        _, width = os.popen("stty size", "r").read().split()
-    except Exception:
-        width = 60
-    print("=" * int(width))
-    print("Training {} {} models on {} dataset...".format(
-        num_models, model_name, dataset_name))
-
-    print("=" * int(width))
-
 
 class ProgressBar:
-    def __init__(self, num_models, num_epochs, num_batches):
+    def __init__(self, num_models, num_epochs, num_batches, run_from_term):
         self._num_models = num_models
         self._num_epochs = num_epochs
         self._num_batches = num_batches
+        self._run_from_term = run_from_term
         self._model = 0
         self._epoch = 0
         self._batch = 0
@@ -87,12 +77,25 @@ class ProgressBar:
         self._start_time_model = time.time()
         self._time_per_epoch = 0
         self._eta = "Estimating..."
-        self._progress_string = "\rNet: {} | Epoch: {:4d} | Batch: {:3d} | {:.2f} % | {} | Train/val: {:.2f}/{:.2f} |"
+        self._progress_string = "\rNet/Epoch/Batch:: {}/{:4d}/{:3d} | {:.2f} % | {} | Train/val: {:.2f}/{:.2f} |"
+    
+
+    def init_print(self, num_models, model_name, dataset_name):
+        if self._run_from_term:
+            _, width = os.popen("stty size", "r").read().split()
+        else:
+            width = 60
+        print("=" * int(width))
+        print("Training {} {} models on {} dataset...".format(
+            num_models, model_name, dataset_name))
+
+        print("=" * int(width))
+
 
     def finished_model(self, num_parameters, test_loss, acc):
-        try:
+        if self._run_from_term:
             _, width = os.popen("stty size", "r").read().split()
-        except Exception:
+        else:
             width = 60
         finished_string = "=" * int(width)
         finished_string += "\nFinished training model with {} parameters".format(
@@ -106,9 +109,9 @@ class ProgressBar:
         print(finished_string)
 
     def finished_training(self):
-        try:
+        if self._run_from_term:
             _, width = os.popen("stty size", "r").read().split()
-        except Exception:
+        else:
             width = 60
         finished_string = "=" * int(width)
         finished_string += "\nFinished entire training of {} models.".format(
@@ -157,9 +160,9 @@ class ProgressBar:
                                                                self._eta,
                                                                self._train_loss,
                                                                self._val_loss)
-        try:
+        if self._run_from_term:
             _, width = os.popen("stty size", "r").read().split()
-        except Exception:
+        else:
             width = 60
         available_width = max(
             0, int(width) - len(current_progress_string.expandtabs()) - 2)
