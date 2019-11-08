@@ -15,7 +15,7 @@ AVAILABLE_MODELS = ["two_layer_nn"]
 
 
 class Training:
-    def __init__(self, model, dataset, num_params, epochs, prev_model=None):
+    def __init__(self, model, dataset, num_params, epochs, prev_model=None, num_models=None):
         self._train_loader = dataset.train_loader
         self._val_loader = dataset.val_loader
         self._test_loader = dataset.test_loader
@@ -36,10 +36,13 @@ class Training:
             prev_num_hidden = len(prev_model['hidden.weight'])
             self._prev_model = model(input_dim, prev_num_hidden, num_classes)
             self._prev_model.load_state_dict(prev_model)
-            num_params = [num_params[num_params.index(prev_num_hidden) + 1]]
+            num_params = num_params[num_params.index(prev_num_hidden) + 1:]
         else:
             self._prev_model = None
 
+        if num_models is not None:
+            num_params = num_params[:num_models]
+        
         for p in num_params:
             self._all_models.append(model(input_dim, p, num_classes))
 
@@ -133,10 +136,16 @@ if __name__ == "__main__":
         "--prev", type=str, help="run single model size given path to model of previous size", dest="prev")
 
     parser.add_argument(
+        "--num", type=int, help="the number of model sizes to run, starting at smallest model or model given with --prev flag", dest="num")
+
+    parser.add_argument(
         "--config", type=str, help="config file for training", required=True, dest="config")
+
     args = parser.parse_args()
+
     with open(args.config, "r") as fd:
         config = json.load(fd)
+
     dataset_name = "mnist"
     model_name = AVAILABLE_MODELS[args.model]
     batch_size = config["batch_size"][dataset_name.lower()]
@@ -148,10 +157,12 @@ if __name__ == "__main__":
             raise FileNotFoundError("Couldn't find {}".format(args.prev))
         previous_model = torch.load(args.prev)
     num_params = config["num_params"][model_name]
+    if args.num:
+        num_models = args.num
     model = get_model_by_name(model_name)
     dataset = get_dataset(dataset_name, train_subset_size, batch_size)
 
     training = Training(model, dataset, num_params,
-                        epochs, prev_model=previous_model)
+                        epochs, prev_model=previous_model, num_models=num_models)
     training.start()
     training.save()
