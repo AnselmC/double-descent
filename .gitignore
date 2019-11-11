@@ -5,4 +5,4 @@ __pycache__
 *.ipynb
 data/*
 !data/results
-!data/nets
+!data/models
