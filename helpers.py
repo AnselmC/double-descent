@@ -77,7 +77,7 @@ class Progress:
         self._start_time_model = time.time()
         self._time_per_epoch = 0
         self._eta = "Estimating..."
-        self._progress_string = "\rNet/Epoch/Batch:: {}/{:4d}/{:3d} | {:.2f} % | {} | Train/val: {:.2f}/{:.2f} |"
+        self._progress_string = "\rNet/Epoch/Batch: {}/{:4d}/{:3d} | {:.2f} % | {} | Train/val: {:.2f}/{:.2f} |"
     
 
     def init_print(self, num_models, model_name, dataset_name):
@@ -102,7 +102,7 @@ class Progress:
             num_parameters)
         finished_string += "\nFinal train/val/test loss: {:.2f}/{:.2f}/{:.2f}".format(
             self._train_loss, self._val_loss, test_loss)
-        finished_string += "\nAccuracy: {}".format(acc)
+        finished_string += "\nAccuracy: {:.3}".format(acc)
         training_time = datetime.timedelta(
             seconds=round(time.time()-self._start_time_model))
         finished_string += "\nTraining model took: {}\n".format(training_time)
@@ -120,7 +120,7 @@ class Progress:
             seconds=round(time.time()-self._start_time_global))
         finished_string += "\n Training took {}\n".format(training_time)
         finished_string += "=" * int(width)
-        print(finished_string, end="\r")
+        print(finished_string)
 
     def update_batch(self):
         self._batch += 1
