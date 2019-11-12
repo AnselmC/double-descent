@@ -11,7 +11,7 @@ import torch
 from models import get_model_by_name
 from helpers import get_dataset, Progress
 
-AVAILABLE_MODELS = ["two_layer_nn"]
+AVAILABLE_MODELS = ["two_layer_nn", "random_fourier"]
 
 
 class Training:
@@ -95,14 +95,12 @@ class Training:
                     break
 
             running_loss = 0
-            running_total = 0
-            running_correct = 0
+            running_acc = 0
             for data in self._test_loader:
-                loss, total, correct = model.test_step(data, self._device)
+                loss, acc = model.test_step(data, self._device)
                 running_loss += loss
-                running_total += total
-                running_correct += correct
-            accuracy = running_correct / running_total
+                running_acc += acc
+            accuracy = running_acc / len(self._test_loader)
             test_loss = running_loss / len(self._test_loader)
 
             progress.finished_model(
@@ -121,7 +119,7 @@ class Training:
             file_name = os.path.join(path, model_name)
             self.save()
             print("Saving model to \"{}\"\n".format(file_name))
-            torch.save(model.state_dict(), file_name)
+            model.save(file_name)
         progress.finished_training()
 
 
