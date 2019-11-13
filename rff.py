@@ -176,15 +176,17 @@ if __name__ == "__main__":
         train_loss, test_loss, a_norm, features, transforms = compute_random_fourier_features(
             num, input_train, target_train, input_test, target_test, relu=relu, cuda=cuda)
         print("Model with {} params took {:.4f}s".format(num, time.time()-start))
-        mse_train_losses.append(train_loss[0])
-        zero_one_train_losses.append(train_loss[1])
-        mse_test_losses.append(test_loss[0])
-        zero_one_test_losses.append(test_loss[1])
-        norms.append(a_norm)
+        mse_train_losses.append(float(train_loss[0]))
+        zero_one_train_losses.append(float(train_loss[1]))
+        mse_test_losses.append(float(test_loss[0]))
+        zero_one_test_losses.append(float(test_loss[1]))
+        norms.append(float(a_norm))
         model_path = os.path.join("data", "models", "rff")
         if not os.path.exists(model_path):
             os.makedirs(model_path)
         model_name = str(num)
+        if relu:
+            model_name += "_relu"
         if cuda:
             model_name += "_cuda"
         features_fname = os.path.join(model_path, model_name + "_features")
