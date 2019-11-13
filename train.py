@@ -147,7 +147,7 @@ if __name__ == "__main__":
     dataset_name = "mnist"
     model_name = AVAILABLE_MODELS[args.model]
     batch_size = config["batch_size"][dataset_name.lower()]
-    train_subset_size = config["train_subset_size"][dataset_name.lower()]
+    train_subset_size = config["train_subset_size"][model_name.lower()]
     epochs = config["epochs"]
     previous_model = None
     if args.prev:
@@ -155,6 +155,7 @@ if __name__ == "__main__":
             raise FileNotFoundError("Couldn't find {}".format(args.prev))
         previous_model = torch.load(args.prev)
     num_params = config["num_params"][model_name]
+    num_models = None
     if args.num:
         num_models = args.num
     model = get_model_by_name(model_name)
