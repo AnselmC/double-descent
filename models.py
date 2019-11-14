@@ -26,11 +26,13 @@ def mse_loss():
 
 class MSELoss:
     def __call__(model, outputs, labels):
-        outputs_soft = F.softmax(outputs, dim=0)
-        one_hot_labels = torch.FloatTensor(len(labels), outputs.shape[1])
+        device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu")
+        outputs_soft = F.softmax(outputs, dim=0).to(device)
+        one_hot_labels = torch.FloatTensor(len(labels), outputs.shape[1]).to(device)
         one_hot_labels.zero_()
         one_hot_labels.scatter_(1, labels.view(-1, 1), 1)
-        loss = torch.mean((outputs - one_hot_labels) ** 2)
+        loss = torch.mean((outputs_soft - one_hot_labels) ** 2)
         return loss
 
 
