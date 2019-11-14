@@ -5,7 +5,10 @@ import json
 import torch
 import torchvision.datasets as datasets
 import numpy as np
-import cupy as cp
+try:
+    import cupy as cp
+except:
+    pass
 from helpers import get_transform
 
 
@@ -17,6 +20,7 @@ def dot(a, b, cuda=False):
     else:
         return np.dot(a, b)
 
+
 def maximum(a, cuda=False):
     if cuda:
         res = cp.maximum(a, 0)
@@ -24,6 +28,7 @@ def maximum(a, cuda=False):
         return res
     else:
         return np.maximum(a, 0)
+
 
 def norm(a, axis, cuda=False):
     if cuda:
@@ -33,6 +38,7 @@ def norm(a, axis, cuda=False):
     else:
         return np.linalg.norm(a, axis=axis)
 
+
 def randn(a, b, cuda=False):
     if cuda:
         res = cp.random.randn(a, b)
@@ -41,6 +47,7 @@ def randn(a, b, cuda=False):
     else:
         return np.random.randn(a, b)
 
+
 def cos(a, cuda=False):
     if cuda:
         res = cp.cos(a)
@@ -48,6 +55,7 @@ def cos(a, cuda=False):
         return res
     else:
         return np.cos(a)
+
 
 def lstsq(x, y, cuda=False):
     if cuda:
@@ -58,6 +66,7 @@ def lstsq(x, y, cuda=False):
     else:
         return np.linalg.lstsq(x, y, rcond=None)[0]
 
+
 def zero_one(y, target, cuda=False):
     if cuda:
         res = (target != cp.around(y)).sum() / len(target)
@@ -66,7 +75,8 @@ def zero_one(y, target, cuda=False):
     else:
         return (target != np.around(y)).sum() / len(target)
 
-def compute_random_fourier_features(num_params, input_train, target_train, input_test, target_test, relu=False, cuda=False):
+
+def compute_random_fourier_features(num_params, input_train, target_train, input_test, target_test, relu=False, cuda=False, one_hot=False):
     v = generate_random_fourier_matrix(num_params, relu, cuda)
     x = transform_inputs(v, input_train, relu, cuda)
     a = lstsq(x, target_train, cuda)
@@ -109,7 +119,7 @@ def mse(predictions, targets, cuda=False):
         return np.square(np.subtract(predictions, targets)).mean()
 
 
-def get_data(train=True, cuda=False):
+def get_data(train=True, cuda=False, one_hot=False):
     subset_size = int(1e4)
 
     dataset = datasets.MNIST(root='./data',
@@ -121,12 +131,13 @@ def get_data(train=True, cuda=False):
     targets = []
 
     for i in range(subset_size):
-        #if cuda:
-        #    inputs.append(cp.asarray(dataset[i][0]))
-        #    targets.append(cp.asarray(dataset[i][1]))
-
         inputs.append(np.array(dataset[i][0]))
-        targets.append(np.array(dataset[i][1]))
+        target = np.array(dataset[i][1])
+        if one_hot:
+            zeros = np.zeros(10)
+            zeros[target] = 1
+            target = zeros
+        targets.append(target)
 
     inputs = np.array(inputs)
     targets = np.array(targets)
@@ -151,9 +162,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config", type=str, dest="config", help="json file that holds config information", required=True)
 
-    parser.add_argument("--relu", action="store_true", help="Whether to use relu or not (default: False)", default=False)
+    parser.add_argument("--relu", action="store_true",
+                        help="Whether to use relu or not (default: False)", default=False)
 
-    parser.add_argument("--cuda", action="store_true", help="Whether to use cuda or not (default: False)", default=False)
+    parser.add_argument("--cuda", action="store_true",
+                        help="Whether to use cuda or not (default: False)", default=False)
+
+    parser.add_argument("--one_hot", action="store_true",
+                        help="Whether to use one-hot encoding for output", default=False)
+
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
@@ -162,25 +179,29 @@ if __name__ == "__main__":
     num_params = config["num_params"]["random_fourier"]
     relu = args.relu
     cuda = args.cuda
+    one_hot = args.one_hot
     mse_train_losses = []
     zero_one_train_losses = []
     mse_test_losses = []
     zero_one_test_losses = []
     norms = []
 
-    input_train, target_train = get_data(cuda=cuda)
-    input_test, target_test = get_data(train=False, cuda=cuda)
+    input_train, target_train = get_data(cuda=cuda, one_hot=one_hot)
+    input_test, target_test = get_data(train=False, cuda=cuda, one_hot=one_hot)
 
     for num in num_params:
         start = time.time()
         train_loss, test_loss, a_norm, features, transforms = compute_random_fourier_features(
-            num, input_train, target_train, input_test, target_test, relu=relu, cuda=cuda)
+            num, input_train, target_train, input_test, target_test, relu=relu, cuda=cuda, one_hot=one_hot)
         print("Model with {} params took {:.4f}s".format(num, time.time()-start))
         mse_train_losses.append(float(train_loss[0]))
         zero_one_train_losses.append(float(train_loss[1]))
         mse_test_losses.append(float(test_loss[0]))
         zero_one_test_losses.append(float(test_loss[1]))
-        norms.append(float(a_norm))
+        if one_hot:
+            norms.append(a_norm.tolist())
+        else:
+            norms.append(float(a_norm))
         model_path = os.path.join("data", "models", "rff")
         if not os.path.exists(model_path):
             os.makedirs(model_path)
@@ -189,11 +210,12 @@ if __name__ == "__main__":
             model_name += "_relu"
         if cuda:
             model_name += "_cuda"
+        if one_hot:
+            model_name += "_one_hot"
         features_fname = os.path.join(model_path, model_name + "_features")
         np.savez(features_fname, features)
         transforms_fname = os.path.join(model_path, model_name + "_transforms")
         np.savez(transforms_fname, transforms)
-
 
     results = {}
     results["norms"] = norms
@@ -209,7 +231,8 @@ if __name__ == "__main__":
     name = "relu" if relu else "reg"
     if cuda:
         name += "_cuda"
+    if one_hot:
+        name += "_one_hot"
     file_name = os.path.join(results_path, name + ".json")
     with open(file_name, "w") as f:
         json.dump(results, f, indent=4)
-
