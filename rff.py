@@ -148,14 +148,6 @@ def get_data(train=True, cuda=False, one_hot=False):
     return inputs, targets
 
 
-# apply RFF transformation with variable amount of parameters
-# compute params using pseudo-inverse
-# compute squared-loss on test set
-# QUESTION: how would you compute zero-one loss in this particular case??
-# compute squared-loss on train set
-# compute l2 norm of params
-
-# do the same for ReLU RFF
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Compute RFF or ReLu RFF using linear regression")
