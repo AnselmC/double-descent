@@ -174,7 +174,7 @@ if __name__ == "__main__":
     epochs = args.epochs if args.epochs else config["epochs"]
     previous_model = None
     if args.prev:
-        if type(loss_fn).__name__ not in args.prev:
+        if loss_fn not in args.prev:
             raise RuntimeError("Use same loss function")
         if not os.path.exists(args.prev):
             raise FileNotFoundError("Couldn't find {}".format(args.prev))

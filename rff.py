@@ -1,4 +1,5 @@
 import argparse
+import math
 import time
 import os
 import json
@@ -69,15 +70,15 @@ def lstsq(x, y, cuda=False):
 
 def zero_one(y, target, cuda=False):
     if cuda:
-        res = (target != cp.around(y)).sum() / len(target)
+        res = (target != cp.around(y)).mean()
         cp.cuda.Stream.null.synchronize()
         return res
     else:
-        return (target != np.around(y)).sum() / len(target)
+        return (target != np.around(y)).mean()
 
 
-def compute_random_fourier_features(num_params, input_train, target_train, input_test, target_test, relu=False, cuda=False, one_hot=False):
-    v = generate_random_fourier_matrix(num_params, relu, cuda)
+def compute_random_fourier_features(num_params, input_train, target_train, input_test, target_test, relu=False, cuda=False, one_hot=False, unit_sphere=False):
+    v = generate_random_fourier_matrix(num_params, unit_sphere, cuda)
     x = transform_inputs(v, input_train, relu, cuda)
     a = lstsq(x, target_train, cuda)
     preds = dot(x, a, cuda)
@@ -92,8 +93,8 @@ def compute_random_fourier_features(num_params, input_train, target_train, input
     return (mse_train, zero_one_train), (mse_test, zero_one_test), a_norm, a, v
 
 
-def generate_random_fourier_matrix(num_params, relu, cuda):
-    if relu:
+def generate_random_fourier_matrix(num_params, unit_sphere, cuda):
+    if unit_sphere:
         v = randn(num_params, 784, cuda)
         v /= norm(v, axis=0, cuda=cuda)
     else:
@@ -148,14 +149,6 @@ def get_data(train=True, cuda=False, one_hot=False):
     return inputs, targets
 
 
-# apply RFF transformation with variable amount of parameters
-# compute params using pseudo-inverse
-# compute squared-loss on test set
-# QUESTION: how would you compute zero-one loss in this particular case??
-# compute squared-loss on train set
-# compute l2 norm of params
-
-# do the same for ReLU RFF
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Compute RFF or ReLu RFF using linear regression")
@@ -171,6 +164,8 @@ if __name__ == "__main__":
     parser.add_argument("--one_hot", action="store_true",
                         help="Whether to use one-hot encoding for output", default=False)
 
+    parser.add_argument("--unit_sphere", action="store_true",
+                        help="Whether to sample vis from unit-spehere (will otherwise be sampled from N(0, 0.04)", default=False)
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
@@ -179,6 +174,7 @@ if __name__ == "__main__":
     num_params = config["num_params"]["random_fourier"]
     relu = args.relu
     cuda = args.cuda
+    unit_sphere = args.unit_sphere
     one_hot = args.one_hot
     mse_train_losses = []
     zero_one_train_losses = []
@@ -191,31 +187,38 @@ if __name__ == "__main__":
 
     for num in num_params:
         start = time.time()
-        train_loss, test_loss, a_norm, features, transforms = compute_random_fourier_features(
-            num, input_train, target_train, input_test, target_test, relu=relu, cuda=cuda, one_hot=one_hot)
-        print("Model with {} params took {:.4f}s".format(num, time.time()-start))
-        mse_train_losses.append(float(train_loss[0]))
-        zero_one_train_losses.append(float(train_loss[1]))
-        mse_test_losses.append(float(test_loss[0]))
-        zero_one_test_losses.append(float(test_loss[1]))
-        if one_hot:
-            norms.append(a_norm.tolist())
-        else:
-            norms.append(float(a_norm))
-        model_path = os.path.join("data", "models", "rff")
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        model_name = str(num)
-        if relu:
-            model_name += "_relu"
-        if cuda:
-            model_name += "_cuda"
-        if one_hot:
-            model_name += "_one_hot"
-        features_fname = os.path.join(model_path, model_name + "_features")
-        np.savez(features_fname, features)
-        transforms_fname = os.path.join(model_path, model_name + "_transforms")
-        np.savez(transforms_fname, transforms)
+        try:
+            train_loss, test_loss, a_norm, features, transforms = compute_random_fourier_features(
+            num, input_train, target_train, input_test, target_test, relu=relu, cuda=cuda, one_hot=one_hot, unit_sphere=unit_sphere)
+            mse_train_losses.append(float(train_loss[0]))
+            zero_one_train_losses.append(float(train_loss[1]))
+            mse_test_losses.append(float(test_loss[0]))
+            zero_one_test_losses.append(float(test_loss[1]))
+            if one_hot:
+                norms.append(a_norm.tolist())
+            else:
+                norms.append(float(a_norm))
+            model_path = os.path.join("data", "models", "rff")
+            if not os.path.exists(model_path):
+                os.makedirs(model_path)
+            model_name = str(num)
+            if relu:
+                model_name += "_relu"
+            if cuda:
+                model_name += "_cuda"
+            if one_hot:
+                model_name += "_one_hot"
+            if unit_sphere:
+                model_name += "_unit_sphere"
+            features_fname = os.path.join(model_path, model_name + "_features")
+            np.savez(features_fname, features)
+            transforms_fname = os.path.join(model_path, model_name + "_transforms")
+            np.savez(transforms_fname, transforms) 
+        except MemoryError as e:
+            print(e)
+            break
+        print("Model with {} params took {:d} mins and {:.4f}s".format(num, math.floor((time.time()-start)/60), (time.time()-start)%60))
+        
 
     results = {}
     results["norms"] = norms
@@ -233,6 +236,8 @@ if __name__ == "__main__":
         name += "_cuda"
     if one_hot:
         name += "_one_hot"
+    if unit_sphere:
+        name += "_unit_sphere"
     file_name = os.path.join(results_path, name + ".json")
     with open(file_name, "w") as f:
         json.dump(results, f, indent=4)
