@@ -1,20 +1,26 @@
 import json
+from collections import OrderedDict
 import matplotlib.pyplot as plt
 
-test_file = "data/results/epochs_600/two_layer_nn.json"
+test_file = "data/results/epochs_600_cpu/two_layer_nn.json"
+test_file = "data/results/two_layer_nn/CrossEntropyLoss/6000.json"
 test_model = "two_layer_nn_3985"
 def plot_double_descent(file_name):
     with open(file_name, "r") as fd:
         content = json.load(fd)
 
-    sizes = [int(x.split("_")[-1])/1e3 for x in content["Train losses"].keys()]
-    final_train_losses = [v[-1] for v in content["Train losses"].values()]
-    final_val_losses = [v[-1] for v in content["Val losses"].values()]
+    sizes = sorted([int(x.split("_")[-1])/1e3 for x in content["Train losses"].keys()])
+    train_losses = OrderedDict(sorted(content["Train losses"].items(), key= lambda t: int(t[0].split("_")[-1])))
+    val_losses = OrderedDict(sorted(content["Val losses"].items(), key= lambda t: int(t[0].split("_")[-1])))
+    final_train_losses = [v[-1] for v in train_losses.values()]
+    final_val_losses = [v[-1] for v in val_losses.values()]
     test_losses = list(content["Test losses"].values())
+    test_losses = list(OrderedDict(sorted(content["Test losses"].items(), key= lambda t: int(t[0].split("_")[-1]))).values())
     fig, ax = plt.subplots()
     ax.semilogx(sizes, final_train_losses, ".-", label="Train")
     ax.semilogx(sizes, final_val_losses, ".-", label="Validation")
     ax.semilogx(sizes, test_losses, ".-", label="Test")
+    plt.axvline(40e3/1e3)
     fig.legend()
     plt.title("Double descent curve")
     plt.ylabel("Loss")
