@@ -5,3 +5,4 @@ __pycache__
 *.ipynb
 data/*
 !data/results
+config.json
