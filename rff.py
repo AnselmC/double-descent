@@ -6,6 +6,8 @@ import json
 import torch
 import torchvision.datasets as datasets
 import numpy as np
+import sklearn
+
 try:
     import cupy as cp
 except:
@@ -31,13 +33,13 @@ def maximum(a, cuda=False):
         return np.maximum(a, 0)
 
 
-def norm(a, axis, cuda=False):
+def norm(a, cuda=False):
     if cuda:
-        res = cp.linalg.norm(a, axis=axis)
+        res = cp.linalg.norm(a)
         cp.cuda.Stream.null.synchronize()
         return res
     else:
-        return np.linalg.norm(a, axis=axis)
+        return np.linalg.norm(a)
 
 
 def randn(a, b, cuda=False):
@@ -74,8 +76,7 @@ def zero_one(y, target, cuda=False):
         cp.cuda.Stream.null.synchronize()
         return res
     else:
-        return (target != np.around(y)).mean()
-
+        return sklearn.metrics.zero_one_loss(np.around(y), target)
 
 def compute_random_fourier_features(num_params, input_train, target_train, input_test, target_test, relu=False, cuda=False, one_hot=False, unit_sphere=False):
     v = generate_random_fourier_matrix(num_params, unit_sphere, cuda)
@@ -88,7 +89,7 @@ def compute_random_fourier_features(num_params, input_train, target_train, input
     preds = dot(x, a, cuda)
     mse_test = mse(preds, target_test)
     zero_one_test = zero_one(preds, target_test, cuda)
-    a_norm = norm(a, axis=0, cuda=cuda)
+    a_norm = norm(a, cuda=cuda)
 
     return (mse_train, zero_one_train), (mse_test, zero_one_test), a_norm, a, v
 
@@ -96,7 +97,7 @@ def compute_random_fourier_features(num_params, input_train, target_train, input
 def generate_random_fourier_matrix(num_params, unit_sphere, cuda):
     if unit_sphere:
         v = randn(num_params, 784, cuda)
-        v /= norm(v, axis=0, cuda=cuda)
+        v /= norm(v, cuda=cuda)
     else:
         v = randn(num_params, 784, cuda) + 1/25
     return v
@@ -117,7 +118,7 @@ def mse(predictions, targets, cuda=False):
         cp.cuda.Stream.null.synchronize()
         return res
     else:
-        return np.square(np.subtract(predictions, targets)).mean()
+        return np.square(np.subtract(predictions, targets)).sum()/len(predictions)
 
 
 def get_data(train=True, cuda=False, one_hot=False):
