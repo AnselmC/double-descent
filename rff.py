@@ -7,6 +7,7 @@ import torch
 import torchvision.datasets as datasets
 import numpy as np
 import sklearn
+from sklearn.metrics import zero_one_loss
 
 try:
     import cupy as cp
@@ -39,7 +40,7 @@ def norm(a, cuda=False):
         cp.cuda.Stream.null.synchronize()
         return res
     else:
-        return np.linalg.norm(a)
+        return np.linalg.norm(a, axis=0).mean()
 
 
 def randn(a, b, cuda=False):
@@ -76,7 +77,12 @@ def zero_one(y, target, cuda=False):
         cp.cuda.Stream.null.synchronize()
         return res
     else:
-        return sklearn.metrics.zero_one_loss(np.around(y), target)
+        y_one_hot = np.zeros(y.shape)
+        i = 0
+        for col in y:
+            y_one_hot[i, np.argmax(col)] = 1
+            i += 1
+        return sklearn.metrics.zero_one_loss(np.around(y_one_hot), target)
 
 def compute_random_fourier_features(num_params, input_train, target_train, input_test, target_test, relu=False, cuda=False, one_hot=False, unit_sphere=False):
     v = generate_random_fourier_matrix(num_params, unit_sphere, cuda)
@@ -202,6 +208,11 @@ if __name__ == "__main__":
             model_path = os.path.join("data", "models", "rff")
             if not os.path.exists(model_path):
                 os.makedirs(model_path)
+            print(mse_train_losses)
+            print(mse_test_losses)
+            print(zero_one_train_losses)
+            print(zero_one_test_losses)
+            print(norms)
             model_name = str(num)
             if relu:
                 model_name += "_relu"
