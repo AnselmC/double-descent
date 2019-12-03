@@ -52,6 +52,14 @@ def randn(a, b, cuda=False):
         return np.random.randn(a, b)
 
 
+def sin(a, cuda=False):
+    if cuda:
+        res = cp.sin(a)
+        cp.cuda.Stream.null.synchronize()
+        return res
+    else:
+        return np.sin(a)
+
 def cos(a, cuda=False):
     if cuda:
         res = cp.cos(a)
@@ -59,7 +67,6 @@ def cos(a, cuda=False):
         return res
     else:
         return np.cos(a)
-
 
 def lstsq(x, y, cuda=False):
     if cuda:
@@ -114,7 +121,7 @@ def transform_inputs(random_fourier_matrix, inputs, relu=False, cuda=False):
     if relu:
         transformed = maximum(transformed, cuda)
     else:
-        transformed = cos(transformed, cuda)
+        transformed = np.hstack([cos(transformed, cuda), sin(transformed, cuda)])
     return transformed
 
 
@@ -192,6 +199,8 @@ if __name__ == "__main__":
     input_train, target_train = get_data(cuda=cuda, one_hot=one_hot)
     input_test, target_test = get_data(train=False, cuda=cuda, one_hot=one_hot)
 
+    if not relu:
+        num_params = [p // 2 for p in num_params]
     for num in num_params:
         start = time.time()
         try:
@@ -234,6 +243,7 @@ if __name__ == "__main__":
 
     results = {}
     results["norms"] = norms
+    results["num_parameters"] = num_params
     results["mse_train_losses"] = mse_train_losses
     results["zero_one_train_losses"] = zero_one_train_losses
     results["mse_test_losses"] = mse_test_losses
