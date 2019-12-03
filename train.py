@@ -15,8 +15,8 @@ AVAILABLE_MODELS = ["two_layer_nn", "random_fourier"]
 
 AVAILABLE_LOSS_FNS = [
     mse_loss(),
-    cross_entropy(),
-    zero_one()
+    zero_one(),
+    cross_entropy()
 ]
 
 
