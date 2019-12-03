@@ -3,7 +3,7 @@
 This repository was created as part of the seminar _Generalization and Optimization in Deep Learning_ led by Thomas Frerix
 during the winter semester 2019/2020 at the TU Munich.
 
-The goal is to reproduce the results of the findings of the paper [_Reconciling modern machine learning practices with the classical bias-variance tradeoff_](https://www.researchgate.net/publication/334663035_Reconciling_modern_machine-learning_practice_and_the_classical_bias-variance_trade-off) by Mikhail et al at Ohio State.
+The goal is to reproduce the results of the paper [_Reconciling modern machine learning practices with the classical bias-variance tradeoff_](https://www.researchgate.net/publication/334663035_Reconciling_modern_machine-learning_practice_and_the_classical_bias-variance_trade-off) by Mikhail et al at Ohio State.
 
 Currently, it is possible to compute the random feature models (both fourier and relu) and the two layer net on the MNIST dataset.
 
@@ -24,4 +24,4 @@ TODO
 TODO
 ## Contributing
 
-If you would like to this venture (by adding new models, datasets, etc.) please feel free to create a pull request.
+If you would like to contribute to this venture (by adding new models, datasets, etc.) please feel free to create a pull request.
