@@ -17,7 +17,7 @@ def cross_entropy():
 
 
 def zero_one():
-    pass
+    raise NotImplementedError("Zero one error hasn't been implemented")
 
 
 def mse_loss():
