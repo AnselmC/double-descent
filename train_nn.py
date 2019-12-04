@@ -144,7 +144,7 @@ if __name__ == "__main__":
                                      "with growing network capacity")
 
     parser.add_argument(
-        "--model", type=int, help="select model to train: 0 [two_layer_net], 1 [Random Fourier Features], 2 [ReLU Random Fourier Features]", choices={0, 1, 2}, dest="model", default=0)
+        "--model", type=int, help="select model to train: 0 [two_layer_net], 1 [Random Fourier Features], 2 [Random ReLU Features]", choices={0, 1, 2}, dest="model", default=0)
 
     parser.add_argument(
         "--prev", type=str, help="run single model size given path to model of previous size", dest="prev")
