@@ -17,11 +17,16 @@ def cross_entropy():
 
 
 def zero_one():
-    raise NotImplementedError("Zero one error hasn't been implemented")
+    return ZeroOneLoss()
 
 
 def mse_loss():
     return MSELoss()
+
+
+class ZeroOneLoss:
+    def __call__(model, output, labels):
+        raise NotImplementedError("Zero-one loss has not yet been implemented")
 
 
 class MSELoss:
