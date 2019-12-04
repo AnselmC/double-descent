@@ -102,7 +102,6 @@ optional arguments:
   --transparent         Save plot with transparent background
 ```
 
-TODO
 ## Contributing
 
 If you would like to contribute to this venture (by fixing bugs, adding features, models, datasets, etc.) please feel free to create a pull request.

@@ -178,10 +178,10 @@ if __name__ == "__main__":
                         help="Whether to use cuda or not (default: False)", default=False)
 
     parser.add_argument("--one_hot", action="store_true",
-                        help="Whether to use one-hot encoding for output", default=False)
+                        help="Whether to use one-hot encoding for output (default: False)", default=False)
 
     parser.add_argument("--unit_sphere", action="store_true",
-                        help="Whether to sample vis from unit-spehere (will otherwise be sampled from N(0, 0.04)", default=False)
+                        help="Whether to sample vis from unit-sphere (will otherwise be sampled from N(0, 0.04)", default=False)
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
