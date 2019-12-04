@@ -4,5 +4,4 @@ __pycache__
 .ipynb_checkpoints/*
 *.ipynb
 data/*
-!data/results
 config.json
