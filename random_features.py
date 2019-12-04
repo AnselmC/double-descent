@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 import math
 import time
@@ -217,11 +219,6 @@ if __name__ == "__main__":
             model_path = os.path.join("data", "models", "rff")
             if not os.path.exists(model_path):
                 os.makedirs(model_path)
-            print(mse_train_losses)
-            print(mse_test_losses)
-            print(zero_one_train_losses)
-            print(zero_one_test_losses)
-            print(norms)
             model_name = str(num)
             if relu:
                 model_name += "_relu"

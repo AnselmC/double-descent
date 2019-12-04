@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 # built-in
 import json
 import time
