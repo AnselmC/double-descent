@@ -31,9 +31,11 @@ def plot_results(results, file_prefix, label_color, background_color, transparen
             data *= 100  # show as percentage
         if "test" in titles[i]:
             if "zero" in titles[i]:
+                # TODO: load value from kernel machine result
                 ax.hlines(3.9, xmin=0, xmax=max(num_params),
                           color="C0", label="min. norm kernel")
             else:
+                # TODO: load value from kernel machine result
                 ax.hlines(0.13, xmin=0, xmax=max(num_params),
                           color="C0", label="min. norm kernel")
 
@@ -55,7 +57,7 @@ def plot_results(results, file_prefix, label_color, background_color, transparen
         ax.spines["right"].set_visible(False)
         ax.spines["left"].set_color(label_color)
         legend = ax.legend(frameon=False, fontsize=9)
-        plt.setp(legend.get_texts(), color="w")
+        plt.setp(legend.get_texts(), color=label_color)
     fig.tight_layout()
     fig.set_facecolor(background_color)
     plt.savefig(file_prefix + "_losses.pdf", transparent=transparent)
@@ -68,6 +70,7 @@ def plot_results(results, file_prefix, label_color, background_color, transparen
         ax.semilogy(num_params, norms.mean(axis=1), ".-", color="orange")
     except:
         ax.semilogy(num_params, norms, ".-", color="orange", label="RFF")
+    # TODO: load value from kernel machine result
     ax.hlines(8, xmin=0, xmax=max(num_params),
               color="C0", label="min. norm kernel")
     ax.spines["top"].set_visible(False)
@@ -80,7 +83,7 @@ def plot_results(results, file_prefix, label_color, background_color, transparen
     ax.tick_params(colors=label_color, which="both")
     ax.set_yticks([], minor=True)
     legend = ax.legend(frameon=False)
-    plt.setp(legend.get_texts(), color="w")
+    plt.setp(legend.get_texts(), color=label_color)
     norm_fig.set_facecolor(background_color)
 
     norm_fig.tight_layout()
@@ -98,17 +101,17 @@ if __name__ == "__main__":
     parser.add_argument("--saveto", dest="file_prefix", type=str,
                         help="The file prefix to save the plots to", required=True)
 
-    parser.add_argument("--bg", det="bg", type=str,
+    parser.add_argument("--bg", dest="bg", type=str,
                         help="The desired background color of the plot. Any acceptable matplotlib string (default \"black\")", default="black")
-    parser.add_argument("--fg", det="fg", type=str,
+    parser.add_argument("--fg", dest="fg", type=str,
                         help="The desired label color of the plot. Any acceptable matplotlib string (default \"white\")", default="white")
     parser.add_argument("--transparent", action="store_true",
                         help="Save plot with transparent background", default=False)
 
     args = parser.parse_args()
-    transparent = parser.transparent
-    bg = parser.bg
-    fg = parser.fg
+    transparent = args.transparent
+    bg = args.bg
+    fg = args.fg
     results = {}
     for result in args.results:
         result = json.load(result)
