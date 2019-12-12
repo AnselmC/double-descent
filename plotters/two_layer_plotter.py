@@ -19,7 +19,7 @@ def plot_double_descent(result, file_prefix, label_color, background_color, tran
     test_losses = list(result["Test losses"].values())
     test_losses = list(OrderedDict(sorted(result["Test losses"].items(
     ), key=lambda t: int(t[0].split("_")[-1]))).values())
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(4.5, 3))
     ax.set_facecolor(background_color)
     ax.semilogx(sizes, final_train_losses, ".-", label="Train", color="C0")
     ax.semilogx(sizes, test_losses, ".-", label="Test", color="C1")
@@ -39,6 +39,7 @@ def plot_double_descent(result, file_prefix, label_color, background_color, tran
     plt.setp(legend.get_texts(), color=label_color)
     plt.ylabel("Loss", color=label_color)
     plt.xlabel(r"N $(\times 10^3)$", color=label_color)
+    fig.tight_layout()
     plt.savefig(file_prefix + "two_layer_double_descent.pdf",
                 transparent=transparent)
     plt.show()

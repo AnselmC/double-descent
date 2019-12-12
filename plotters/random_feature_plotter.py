@@ -7,7 +7,9 @@ import argparse
 
 
 def plot_results(results, file_prefix, label_color, background_color, transparent):
-    num_params = 2 * np.array(results.pop("num_parameters"))
+    num_params = np.array(results.pop("num_parameters"))
+    if file_prefix == "reg":
+        num_params *= 2
     norms = np.array(results.pop("norms"))
     titles = [x.replace("_", " ") for x in results.keys()]
     fig = plt.figure(figsize=(9, 6))
@@ -30,18 +32,19 @@ def plot_results(results, file_prefix, label_color, background_color, transparen
         if "zero" in titles[i]:
             data *= 100  # show as percentage
         if "test" in titles[i]:
-            if "zero" in titles[i]:
-                # TODO: load value from kernel machine result
-                ax.hlines(3.9, xmin=0, xmax=max(num_params),
-                          color="C0", label="min. norm kernel")
-            else:
-                # TODO: load value from kernel machine result
-                ax.hlines(0.13, xmin=0, xmax=max(num_params),
-                          color="C0", label="min. norm kernel")
+            if file_prefix == "reg":
+                if "zero" in titles[i]:
+                    # TODO: load value from kernel machine result
+                    ax.hlines(3.9, xmin=0, xmax=max(num_params),
+                              color="C0", label="min. norm kernel")
+                else:
+                    # TODO: load value from kernel machine result
+                    ax.hlines(0.13, xmin=0, xmax=max(num_params),
+                              color="C0", label="min. norm kernel")
 
-            ax.semilogy(num_params, data, ".-", color="orange", label="RFF")
+            ax.semilogy(num_params, data, ".-", color="orange", label="RFF" if file_prefix == "reg" else "RRF")
         else:
-            ax.plot(num_params, data, ".-", color="orange", label="RFF")
+            ax.plot(num_params, data, ".-", color="orange", label="RFF" if file_prefix == "reg" else "RRF")
         ax.vlines(10000, ymin=0, ymax=max(data), color=label_color,
                   linestyle="dotted", label="interpolation")
         if "zero" in titles[i]:
@@ -63,16 +66,17 @@ def plot_results(results, file_prefix, label_color, background_color, transparen
     plt.savefig(file_prefix + "_losses.pdf", transparent=transparent)
     plt.show()
 
-    norm_fig = plt.figure(figsize=(9, 6))
+    norm_fig = plt.figure(figsize=(9/2, 6/2))
     ax = plt.subplot()
 
     try:
         ax.semilogy(num_params, norms.mean(axis=1), ".-", color="orange")
     except:
-        ax.semilogy(num_params, norms, ".-", color="orange", label="RFF")
+        ax.semilogy(num_params, norms, ".-", color="orange", label="RFF" if file_prefix == "reg" else "RRF")
     # TODO: load value from kernel machine result
-    ax.hlines(8, xmin=0, xmax=max(num_params),
-              color="C0", label="min. norm kernel")
+    if file_prefix == "reg":
+        ax.hlines(8, xmin=0, xmax=max(num_params),
+                  color="C0", label="min. norm kernel")
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_color(label_color)
     ax.spines["right"].set_visible(False)
